@@ -1,0 +1,20 @@
+#!/bin/bash
+
+input_I1=$1
+output_O1=$2
+output_O3=$3
+output_O4=$4
+
+PICARD_LIB=/nfs/shared/lib/picard.jar
+
+java -jar $PICARD_LIB CollectInsertSizeMetrics -I $input_I1 -O $output_O3 -H $output_O4
+
+[[ -f $output_O3 ]]  && {
+    # append insert size metrics to the msin metrics output file for each sample
+    cat $output_O3 >> $output_O1
+}
+[[ -f $output_O4 ]] || {
+    touch $output_O4
+}
+
+exit 0

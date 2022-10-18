@@ -1,0 +1,105 @@
+IDS, = glob_wildcards("resources/{id}.bam") # Bam files to iterate across
+
+### Requires:
+	# GNU wget (and a connection to the outside world)
+	# gzip/gunzip
+	# AWK 
+	# Four bioinformatics packages:
+		# the BEDOPS package (https://bedops.readthedocs.io/en/latest/)
+		# Sambamba (https://lomereiter.github.io/sambamba/)
+		# Picard tools (https://broadinstitute.github.io/picard/) 
+		# SAMtools (http://www.htslib.org)
+
+rule all:
+# a pseudo-rule to collect the last rule's target files
+  input: expand("results/{id}.ism.pdf", id=IDS),
+        expand("results/{id}.TP53_exon_coverage.txt", id=IDS)
+  output:
+  shell:
+#    'echo "ALL DONE!"'
+    'rm int/*; echo "ALL DONE!"'
+      
+rule get_annotation_file: # wget to retrieve a hg19 genome annotation file (~450MB) from the Cambridge EBI in the UK
+  input:
+  output:
+      "int/gff.gz"
+  shell:
+    'wget -qO- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_35/GRCh37_mapping/gencode.v35lift37.basic.annotation.gff3.gz > {output}'
+    
+rule gunzipper: # gunzip the file
+  input:
+    "int/gff.gz"
+  output:
+    "int/gff.txt"
+  shell:
+    'gunzip -c {input} > {output}'
+    
+rule awker: # use AWK to retain only rows defining exons and only rows within the TP53 gene
+  input:
+    "int/gff.txt"
+  output:
+    "int/e.txt"
+#    "/nfs/shared/reference/e.txt"
+  shell:
+    'awk \'$3 == "exon" && $9 ~ "gene_name=TP53;"\' {input} > {output}'
+
+rule convert2bed: # convert to a bed file using the convert2bed function of the BEDOPS package
+  input:
+    "int/e.txt"
+#    "/nfs/shared/reference/e.txt"
+  output:
+    "int/exons.bed"
+  container:
+    "/nfs/shared/singularities/bedops.sif"
+  shell:
+    'convert2bed -i gff < {input} > {output}'
+
+rule bedscript_R: 
+# An R script that trims and reformats the exons.bed file generated above into a simple 4-column bed file defining all exons in TP53
+# This is clunky and it could all be done in a single line of AWK but I want to include a test of R in the Rakeiora sandbox please
+# the internal comments explain what the R script does, it does not depend on any packages apart from the base R package
+  input:
+    txt= "int/exons.bed"
+  output:
+    out= "int/exons.simple.bed"
+#  script:
+  shell:
+#   'awk \'{{print $1, $2, $3, $4}}\' < {input.txt} > {output.out}'
+    'scripts/snakemake_bedscript.R {input.txt} {output.out}'
+
+rule exon_base_coverage:
+  input:
+    I1="resources/{id}.bam",
+    I2="int/exons.simple.bed"
+  container:
+    "/nfs/shared/singularities/samtools-1.16.sif"
+  output:
+    "results/{id}.TP53_exon_coverage.txt"
+  shell:
+# Use SAMtools depth to calculate coverage at every base in every exon of TP53  
+    'samtools depth -Hb {input.I2} {input.I1} -o {output}'
+#    'samtools depth -Hb {input.I2} {input.I1} > {output}'
+    
+rule metrics1:
+  input:
+    I1="resources/{id}.bam"
+  output:
+    O1="results/{id}.bam_statistics.txt",
+  container:
+    "/nfs/shared/singularities/sambamba.sif"
+  shell:
+# use the sambamba version of the SAMtools flagstat function to generate, for each Bam file in the directory, a file summarising a set of useful QC metrics  
+    "scripts/metrics1 {input.I1} {output.O1}"
+    
+rule metrics2:
+  input:
+    I1="resources/{id}.bam",
+    I2="results/{id}.bam_statistics.txt"
+  output:
+    O3="results/{id}.ism.txt",
+    O4="results/{id}.ism.pdf"       
+#  container:
+#    "/nfs/shared/singularities/openjdk1.8.simg"
+  shell:
+# use the sambamba version of the SAMtools flagstat function to generate, for each Bam file in the directory, a file summarising a set of useful QC metrics  
+    "scripts/metrics2 {input.I1} {input.I2} {output.O3} {output.O4}"
