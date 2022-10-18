@@ -39,18 +39,18 @@ rule awker: # use AWK to retain only rows defining exons and only rows within th
     "int/gff.txt"
   output:
     "int/e.txt"
-#    "/nfs/shared/reference/e.txt"
+#    "/shared/reference/e.txt"
   shell:
     'awk \'$3 == "exon" && $9 ~ "gene_name=TP53;"\' {input} > {output}'
 
 rule convert2bed: # convert to a bed file using the convert2bed function of the BEDOPS package
   input:
     "int/e.txt"
-#    "/nfs/shared/reference/e.txt"
+#    "/shared/reference/e.txt"
   output:
     "int/exons.bed"
   container:
-    "/nfs/shared/singularities/bedops.sif"
+    "/shared/singularities/bedops.sif"
   shell:
     'convert2bed -i gff < {input} > {output}'
 
@@ -72,7 +72,7 @@ rule exon_base_coverage:
     I1="resources/{id}.bam",
     I2="int/exons.simple.bed"
   container:
-    "/nfs/shared/singularities/samtools-1.16.sif"
+    "/shared/singularities/samtools-1.16.sif"
   output:
     "results/{id}.TP53_exon_coverage.txt"
   shell:
@@ -86,7 +86,7 @@ rule metrics1:
   output:
     O1="results/{id}.bam_statistics.txt",
   container:
-    "/nfs/shared/singularities/sambamba.sif"
+    "/shared/singularities/sambamba.sif"
   shell:
 # use the sambamba version of the SAMtools flagstat function to generate, for each Bam file in the directory, a file summarising a set of useful QC metrics  
     "scripts/metrics1 {input.I1} {output.O1}"
@@ -99,7 +99,7 @@ rule metrics2:
     O3="results/{id}.ism.txt",
     O4="results/{id}.ism.pdf"       
 #  container:
-#    "/nfs/shared/singularities/openjdk1.8.simg"
+#    "/shared/singularities/openjdk1.8.simg"
   shell:
 # use the sambamba version of the SAMtools flagstat function to generate, for each Bam file in the directory, a file summarising a set of useful QC metrics  
     "scripts/metrics2 {input.I1} {input.I2} {output.O3} {output.O4}"
