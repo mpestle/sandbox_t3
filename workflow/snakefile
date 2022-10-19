@@ -68,7 +68,7 @@ rule bedscript_R:
 
 rule exon_base_coverage:
   input:
-    I1="resources/{id}.bam"
+    I1="resources/{id}.bam",
     I2="int/exons_{g}.simple.bed"
   container:
     "/shared/singularities/samtools-1.16.sif"
@@ -91,7 +91,7 @@ rule metrics1:
     
 rule metrics2:
   input:
-    I1="resources/{id}.bam"
+    I1="resources/{id}.bam",
     I2="results/{id}.bam_statistics.txt"
   output:
     O3="results/{id}.ism.txt",
