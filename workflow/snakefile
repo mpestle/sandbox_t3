@@ -41,7 +41,7 @@ rule awker: # use AWK to retain only rows defining exons and only rows within th
   output:
     expand("int/e_{gene}.txt",gene=GENES)
   shell:
-    expand('awk -v gene={gene} \'$3 == "exon" && $9 ~ "gene_name="  gene ";"\' {input} > {output}',gene=GENES)
+    'awk -v gene={gene} \'$3 == "exon" && $9 ~ "gene_name="  gene ";"\' {input} > {output}'
 
 rule convert2bed: # convert to a bed file using the convert2bed function of the BEDOPS package
   input:
