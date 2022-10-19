@@ -1,4 +1,4 @@
-IDS, = glob_wildcards("resources/{id}.bam") # Bam files to iterate across
+IDS, = glob_wildcards("{id}.bam") # Bam files to iterate across
 
 ### Requires:
 	# GNU wget (and a connection to the outside world)
@@ -12,43 +12,39 @@ IDS, = glob_wildcards("resources/{id}.bam") # Bam files to iterate across
 
 rule all:
 # a pseudo-rule to collect the last rule's target files
-  input: expand("results/{id}.ism.pdf", id=IDS),
-        expand("results/{id}.TP53_exon_coverage.txt", id=IDS)
+  input: expand("{id}.ism.pdf", id=IDS)
   output:
   shell:
-#    'echo "ALL DONE!"'
-    'rm int/*; echo "ALL DONE!"'
+    'echo "ALL DONE!"'
       
 rule get_annotation_file: # wget to retrieve a hg19 genome annotation file (~450MB) from the Cambridge EBI in the UK
   input:
   output:
-      "int/gff.gz"
+      "gff.gz"
   shell:
     'wget -qO- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_35/GRCh37_mapping/gencode.v35lift37.basic.annotation.gff3.gz > {output}'
     
 rule gunzipper: # gunzip the file
   input:
-    "int/gff.gz"
+    "gff.gz"
   output:
-    "int/gff.txt"
+    "gff.txt"
   shell:
     'gunzip -c {input} > {output}'
     
 rule awker: # use AWK to retain only rows defining exons and only rows within the TP53 gene
   input:
-    "int/gff.txt"
+    "gff.txt"
   output:
-    "int/e.txt"
+    "e.txt"
   shell:
     'awk \'$3 == "exon" && $9 ~ "gene_name=TP53;"\' {input} > {output}'
 
 rule convert2bed: # convert to a bed file using the convert2bed function of the BEDOPS package
   input:
-    "int/e.txt"
+    "e.txt"
   output:
-    "int/exons.bed"
-  container:
-    "/shared/singularities/bedops.sif"
+    "exons.bed"
   shell:
     'convert2bed -i gff < {input} > {output}'
 
@@ -57,45 +53,38 @@ rule bedscript_R:
 # This is clunky and it could all be done in a single line of AWK but I want to include a test of R in the Rakeiora sandbox please
 # the internal comments explain what the R script does, it does not depend on any packages apart from the base R package
   input:
-    txt= "int/exons.bed"
+    txt= "exons.bed"
   output:
-    out= "int/exons.simple.bed"
-#  script:
-  shell:
-    'scripts/snakemake_bedscript.R {input.txt} {output.out}'
+    out= "exons.simple.bed"
+  script:
+    'snakemake_bedscript.R'
 
 rule exon_base_coverage:
   input:
-    I1="resources/{id}.bam",
-    I2="int/exons.simple.bed"
-  container:
-    "/shared/singularities/samtools-1.16.sif"
+    I1="{id}.bam",
+    I2="exons.simple.bed"
   output:
-    "results/{id}.TP53_exon_coverage.txt"
-  shell:
+    "{id}.TP53_exon_coverage.txt"
+  run:
 # Use SAMtools depth to calculate coverage at every base in every exon of TP53  
-    'samtools depth -Hb {input.I2} {input.I1} -o {output}'
+    shell('samtools depth -Hb {input.I2} {input.I1} -o {output}')
     
-rule metrics1:
+rule metrics:
   input:
-    I1="resources/{id}.bam"
+    I1="{id}.bam"
   output:
-    O1="results/{id}.bam_statistics.txt",
-  container:
-    "/shared/singularities/sambamba.sif"
-  shell:
+    O1="{id}.bam_statistics.txt",
+    O3="{id}.ism.txt",
+    O4="{id}.ism.pdf"       
+  run:
 # use the sambamba version of the SAMtools flagstat function to generate, for each Bam file in the directory, a file summarising a set of useful QC metrics  
-    "scripts/metrics1 {input.I1} {output.O1}"
+    shell('sambamba flagstat {input.I1} > {output.O1}')
+    shell('echo " " >> {output.O1}')
+    shell('echo "READS WITH mapping_quality >= 30" >> {output.O1}')
+    shell('sambamba view -c -F "mapping_quality >= 30" {input.I1} >> {output.O1}')
+    shell('echo " " >> {output.O1}')
+# use picard tool’s CollectInsertSizeMetrics function to generate, for each Bam file in the directory, a txt file and a histogram showing the distribution of DNA sequence insert size    
+    shell('echo "Insert sizes" >> {output.O1}')
+    shell('picard CollectInsertSizeMetrics I={input.I1} O={output.O3} H={output.O4}')
+    shell('cat {output.O3} >> {output.O1}') # append insert size metrics to the msin metrics output file for each sample
     
-rule metrics2:
-  input:
-    I1="resources/{id}.bam",
-    I2="results/{id}.bam_statistics.txt"
-  output:
-    O3="results/{id}.ism.txt",
-    O4="results/{id}.ism.pdf"       
-#  container:
-#    "/shared/singularities/openjdk1.8.simg"
-  shell:
-# run the picard CollectInsertSizeMetrics
-    "scripts/metrics2 {input.I1} {input.I2} {output.O3} {output.O4}"
