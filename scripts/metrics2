@@ -7,7 +7,9 @@ output_O4=$4
 
 PICARD_LIB=/shared/lib/picard.jar
 
-java -jar $PICARD_LIB CollectInsertSizeMetrics -I $input_I1 -O $output_O3 -H $output_O4
+#java -jar $PICARD_LIB CollectInsertSizeMetrics -I $input_I1 -O $output_O3 -H $output_O4
+java -jar $PICARD_LIB CollectInsertSizeMetrics I=$input_I1 O=$output_O3 H=$output_O4
+
 
 [[ -f $output_O3 ]]  && {
     # append insert size metrics to the msin metrics output file for each sample
