@@ -1,5 +1,6 @@
 IDS, = glob_wildcards("resources/{id}.bam") # Bam files to iterate across
-gene = ["TP53"]
+GENES = ["TP53"]
+gene=expand("{gene}", gene=GENES)
 
 ### Requires:
 	# GNU wget (and a connection to the outside world)
@@ -14,7 +15,7 @@ gene = ["TP53"]
 rule all:
 # a pseudo-rule to collect the last rule's target files
   input: expand("results/{id}.ism.pdf", id=IDS),
-        expand("results/{id}.{gene}_exon_coverage.txt", id=IDS)
+        expand("results/{id}.{gene}_exon_coverage.txt", id=IDS, gene=GENES)
   output:
   shell:
 #    'echo "ALL DONE!"'
@@ -37,17 +38,17 @@ rule gunzipper: # gunzip the file
     
 rule awker: # use AWK to retain only rows defining exons and only rows within the {gene} gene
   input:
-    "int/gff.txt"
+    expand("int/gff_{gene}.txt",gene=GENES)
   output:
-    "int/e.txt"
+    expand("int/e_{gene}.txt",gene=GENES)
   shell:
     'awk \'$3 == "exon" && $9 ~ "gene_name={gene};"\' {input} > {output}'
 
 rule convert2bed: # convert to a bed file using the convert2bed function of the BEDOPS package
   input:
-    "int/e.txt"
+    expand("int/e_{gene}.txt",gene=GENES)
   output:
-    "int/exons.bed"
+    expand("int/exons_{gene}.bed",gene=GENES)
   container:
     "/shared/singularities/bedops.sif"
   shell:
@@ -58,9 +59,9 @@ rule bedscript_R:
 # This is clunky and it could all be done in a single line of AWK but I want to include a test of R in the Rakeiora sandbox please
 # the internal comments explain what the R script does, it does not depend on any packages apart from the base R package
   input:
-    txt= "int/exons.bed"
+    txt=expand("int/exons_{gene}.bed",gene=GENES)
   output:
-    out= "int/exons.simple.bed"
+    out=expand("int/exons_{gene}.simple.bed",gene=GENES)
 #  script:
   shell:
     'scripts/snakemake_bedscript.R {input.txt} {output.out}'
@@ -68,7 +69,7 @@ rule bedscript_R:
 rule exon_base_coverage:
   input:
     I1="resources/{id}.bam",
-    I2="int/exons.simple.bed"
+    I2=expand("int/exons_{gene}.simple.bed",gene=GENES)
   container:
     "/shared/singularities/samtools-1.16.sif"
   output:
