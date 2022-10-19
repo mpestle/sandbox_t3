@@ -1,5 +1,5 @@
 IDS, = glob_wildcards("resources/{id}.bam") # Bam files to iterate across
-GENES = ["TP53","CYP2C19"]
+x="TP53"
 
 ### Requires:
 	# GNU wget (and a connection to the outside world)
@@ -14,7 +14,7 @@ GENES = ["TP53","CYP2C19"]
 rule all:
 # a pseudo-rule to collect the last rule's target files
   input: expand("results/{id}.ism.pdf", id=IDS),
-        expand("results/{id}.{gene}_exon_coverage.txt", id=IDS, gene=GENES)
+        expand("results/{id}.{g}_exon_coverage.txt", id=IDS,g=x)
   output:
   shell:
 #    'echo "ALL DONE!"'
@@ -25,7 +25,8 @@ rule get_annotation_file: # wget to retrieve a hg19 genome annotation file (~450
   output:
       "int/gff.gz"
   shell:
-    'wget -qO- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_35/GRCh37_mapping/gencode.v35lift37.basic.annotation.gff3.gz > {output}'
+#    'wget -qO- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_35/GRCh37_mapping/gencode.v35lift37.basic.annotation.gff3.gz > {output}'
+    'wget -qO- http://test.data.nesi.org.nz/app/public/gff.gz > {output}'
     
 rule gunzipper: # gunzip the file
   input:
@@ -34,20 +35,20 @@ rule gunzipper: # gunzip the file
     "int/gff.txt"
   shell:
     'gunzip -c {input} > {output}'
-    
+  
 rule awker: # use AWK to retain only rows defining exons and only rows within the {gene} gene
   input:
     "int/gff.txt"
   output:
-    expand("int/e_{gene}.txt",gene=GENES)
+    "int/e_{x}.txt"
   shell:
-    'awk -v gene={gene} \'$3 == "exon" && $9 ~ "gene_name="  gene ";"\' {input} > {output}'
+    'awk \'$3 == "exon" && $9 ~ "gene_name={x};"\' {input} > {output}'
 
 rule convert2bed: # convert to a bed file using the convert2bed function of the BEDOPS package
   input:
-    expand("int/e_{gene}.txt",gene=GENES)
+    "int/e_{x}.txt"
   output:
-    expand("int/exons_{gene}.bed",gene=GENES)
+    "int/exons_{x}.bed"
   container:
     "/shared/singularities/bedops.sif"
   shell:
@@ -58,30 +59,30 @@ rule bedscript_R:
 # This is clunky and it could all be done in a single line of AWK but I want to include a test of R in the Rakeiora sandbox please
 # the internal comments explain what the R script does, it does not depend on any packages apart from the base R package
   input:
-    txt=expand("int/exons_{gene}.bed",gene=GENES)
+    txt=expand("int/exons_{g}.bed",g=x)
   output:
-    out=expand("int/exons_{gene}.simple.bed",gene=GENES)
+    out=expand("int/exons_{g}.simple.bed",g=x)
 #  script:
   shell:
     'scripts/snakemake_bedscript.R {input.txt} {output.out}'
 
 rule exon_base_coverage:
   input:
-    I1="resources/{id}.bam",
-    I2=expand("int/exons_{gene}.simple.bed",gene=GENES)
+    I1=expand("resources/{id}.bam",id=IDS),
+    I2=expand("int/exons_{g}.simple.bed",g=x)
   container:
     "/shared/singularities/samtools-1.16.sif"
   output:
-    "results/{id}.{gene}_exon_coverage.txt"
+    expand("results/{id}.{g}_exon_coverage.txt",id=IDS,g=x)
   shell:
 # Use SAMtools depth to calculate coverage at every base in every exon of {gene}  
     'samtools depth -Hb {input.I2} {input.I1} -o {output}'
     
 rule metrics1:
   input:
-    I1="resources/{id}.bam"
+    I1=expand("resources/{id}.bam",id=IDS)
   output:
-    O1="results/{id}.bam_statistics.txt",
+    O1=expand("results/{id}.bam_statistics.txt",id=IDS)
   container:
     "/shared/singularities/sambamba.sif"
   shell:
@@ -90,11 +91,11 @@ rule metrics1:
     
 rule metrics2:
   input:
-    I1="resources/{id}.bam",
-    I2="results/{id}.bam_statistics.txt"
+    I1=expand("resources/{id}.bam",id=IDS),
+    I2=expand("results/{id}.bam_statistics.txt",id=IDS)
   output:
-    O3="results/{id}.ism.txt",
-    O4="results/{id}.ism.pdf"       
+    O3=expand("results/{id}.ism.txt",id=IDS),
+    O4=expand("results/{id}.ism.pdf",id=IDS)
 #  container:
 #    "/shared/singularities/openjdk1.8.simg"
   shell:
