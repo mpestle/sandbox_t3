@@ -1,5 +1,5 @@
 IDS, = glob_wildcards("resources/{id}.bam") # Bam files to iterate across
-g="TP53"
+g="CYP2C19"
 
 ### Requires:
 	# GNU wget (and a connection to the outside world)
