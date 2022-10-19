@@ -38,7 +38,7 @@ rule gunzipper: # gunzip the file
     
 rule awker: # use AWK to retain only rows defining exons and only rows within the {gene} gene
   input:
-    expand("int/gff_{gene}.txt",gene=GENES)
+    "int/gff.txt"
   output:
     expand("int/e_{gene}.txt",gene=GENES)
   shell:
