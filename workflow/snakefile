@@ -59,30 +59,30 @@ rule bedscript_R:
 # This is clunky and it could all be done in a single line of AWK but I want to include a test of R in the Rakeiora sandbox please
 # the internal comments explain what the R script does, it does not depend on any packages apart from the base R package
   input:
-    txt=expand("int/exons_{g}.bed",g=x)
+    txt="int/exons_{g}.bed"
   output:
-    out=expand("int/exons_{g}.simple.bed",g=x)
+    out="int/exons_{g}.simple.bed"
 #  script:
   shell:
     'scripts/snakemake_bedscript.R {input.txt} {output.out}'
 
 rule exon_base_coverage:
   input:
-    I1=expand("resources/{id}.bam",id=IDS),
-    I2=expand("int/exons_{g}.simple.bed",g=x)
+    I1="resources/{id}.bam"
+    I2="int/exons_{g}.simple.bed"
   container:
     "/shared/singularities/samtools-1.16.sif"
   output:
-    expand("results/{id}.{g}_exon_coverage.txt",id=IDS,g=x)
+    "results/{id}.{g}_exon_coverage.txt"
   shell:
 # Use SAMtools depth to calculate coverage at every base in every exon of {gene}  
     'samtools depth -Hb {input.I2} {input.I1} -o {output}'
     
 rule metrics1:
   input:
-    I1=expand("resources/{id}.bam",id=IDS)
+    I1="resources/{id}.bam"
   output:
-    O1=expand("results/{id}.bam_statistics.txt",id=IDS)
+    O1="results/{id}.bam_statistics.txt"
   container:
     "/shared/singularities/sambamba.sif"
   shell:
@@ -91,11 +91,11 @@ rule metrics1:
     
 rule metrics2:
   input:
-    I1=expand("resources/{id}.bam",id=IDS),
-    I2=expand("results/{id}.bam_statistics.txt",id=IDS)
+    I1="resources/{id}.bam"
+    I2="results/{id}.bam_statistics.txt"
   output:
-    O3=expand("results/{id}.ism.txt",id=IDS),
-    O4=expand("results/{id}.ism.pdf",id=IDS)
+    O3="results/{id}.ism.txt",
+    O4="results/{id}.ism.pdf"
 #  container:
 #    "/shared/singularities/openjdk1.8.simg"
   shell:
