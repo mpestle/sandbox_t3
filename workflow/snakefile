@@ -1,6 +1,5 @@
 IDS, = glob_wildcards("resources/{id}.bam") # Bam files to iterate across
 GENES = ["TP53","CYP2C19"]
-gene=expand("{gene}", gene=GENES)
 
 ### Requires:
 	# GNU wget (and a connection to the outside world)
