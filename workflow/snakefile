@@ -14,7 +14,7 @@ g="TP53"
 rule all:
 # a pseudo-rule to collect the last rule's target files
   input: expand("results/{id}.ism.pdf", id=IDS),
-        expand("results/{id}.{g}_exon_coverage.txt", id=IDS)
+        expand("results/{id}.{g}_exon_coverage.txt", id=IDS,g=g)
   output:
   shell:
 #    'echo "ALL DONE!"'
