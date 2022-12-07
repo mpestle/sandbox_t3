@@ -26,7 +26,7 @@ rule get_annotation_file: # wget to retrieve a hg19 genome annotation file (~450
       "int/gff.gz"
   shell:
 #    'wget -qO- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_35/GRCh37_mapping/gencode.v35lift37.basic.annotation.gff3.gz > {output}'
-    'wget -qO- http://test.data.nesi.org.nz/app/public/gff.gz > {output}'
+    'wget -qO- --no-check-certificate https://test.data.nesi.org.nz/app/public/gff.gz > {output}'
     
 rule gunzipper: # gunzip the file
   input:
@@ -96,8 +96,6 @@ rule metrics2:
   output:
     O3="results/{id}.ism.txt",
     O4="results/{id}.ism.pdf"
-#  container:
-#    "/shared/singularities/openjdk1.8.simg"
   shell:
 # run the picard CollectInsertSizeMetrics
     "scripts/metrics2 {input.I1} {input.I2} {output.O3} {output.O4}"
