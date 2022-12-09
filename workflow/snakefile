@@ -18,7 +18,7 @@ rule all:
   output:
   shell:
 #    'echo "ALL DONE!"'
-    'rm int/*; echo "ALL DONE!"'
+    'rm -f int/*; echo "ALL DONE!"'
       
 rule get_annotation_file: # wget to retrieve a hg19 genome annotation file (~450MB) from the Cambridge EBI in the UK
   input:
