@@ -14,5 +14,6 @@ define exactly one input for it, with the following characteristics:
 - merge retrieved htsget regions = by sample
 - file name of output = leave blank
 
+New comment
 ---
 
